@@ -291,9 +291,9 @@ function delete_cache(string|array $name, bool $all = false): bool
     //Those files are exceptions and not for deletion
     $exceptions = ['.htaccess', 'index.html', 'php.ini', 'web.config'];
 
-    //ignore kleeja_log in dev stage.
+    //ignore kleeja_log and the history of the debug panel in dev stage.
     if (defined('DEV_STAGE')) {
-        array_push($exceptions, 'kleeja_log.log');
+        array_push($exceptions, 'kleeja_log.log', 'debug');
     }
 
     is_array($plugin_run_result = Plugins::getInstance()->run('delete_cache_func', get_defined_vars()))

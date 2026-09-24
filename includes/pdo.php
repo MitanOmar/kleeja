@@ -203,7 +203,13 @@ class KleejaDatabase
 
         //for the debug panel, kept only while developing, the values can be private like passwords hashes
         if (defined('DEV_STAGE')) {
-            $this->debugr[$this->query_num + 1] = [$query, sprintf('%.5f', get_microtime() - $start), $params];
+            $this->debugr[$this->query_num + 1] = [
+                'sql' => $query,
+                'params' => $params,
+                'start' => $start,
+                'time' => get_microtime() - $start,
+                'origin' => $this->debug_origin(),
+            ];
         }
 
         if (!$this->result) {
@@ -446,6 +452,43 @@ class KleejaDatabase
     {
         //errorInfo is [SQLSTATE, driver error code, driver error message], it is empty for our own exceptions
         $this->error = [$e->errorInfo[1] ?? $e->getCode(), $e->errorInfo[2] ?? $e->getMessage()];
+    }
+
+    /**
+     * the calls that led to the current query, outside of this file, for the debug panel
+     * @return array of ['file' => relative path, 'line' => int, 'function' => the function that has the call]
+     */
+    private function debug_origin(): array
+    {
+        //without the arguments and with a limited depth, so it stays cheap
+        $trace = debug_backtrace(DEBUG_BACKTRACE_IGNORE_ARGS, 8);
+        $root = dirname(__DIR__) . DIRECTORY_SEPARATOR;
+        $origin = [];
+
+        foreach ($trace as $i => $frame) {
+            if (empty($frame['file']) || $frame['file'] === __FILE__) {
+                continue;
+            }
+
+            //the call is written inside the function of the next frame
+            $caller = $trace[$i + 1] ?? [];
+
+            $origin[] = [
+                'file' => str_starts_with($frame['file'], $root)
+                    ? substr($frame['file'], strlen($root))
+                    : $frame['file'],
+                'line' => $frame['line'] ?? 0,
+                'function' => isset($caller['function'])
+                    ? ($caller['class'] ?? '') . ($caller['type'] ?? '') . $caller['function'] . '()'
+                    : '',
+            ];
+
+            if (count($origin) === 3) {
+                break;
+            }
+        }
+
+        return $origin;
     }
 
     /**

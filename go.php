@@ -717,6 +717,18 @@ switch ($current_go_case) {
     // Default , if you are a developer , you can embed your page here with this hook
     // by using g('go') and your codes.
     //
+    //
+    //history of the last requests for the debug toolbar, only while developing
+    //
+    case 'debug':
+        if (!defined('DEV_STAGE') || !user_can('enter_acp')) {
+            kleeja_err($lang['ERROR_NAVIGATATION']);
+        }
+
+        kleeja_debug_history(g('id'));
+
+        break;
+
     default:
         $no_request = true;
 

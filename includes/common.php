@@ -69,16 +69,33 @@ function kleeja_show_error(
         case E_USER_NOTICE:
         case E_DEPRECATED:
         case E_USER_DEPRECATED:
+            $error_name = [
+                E_WARNING => 'Warning',
+                E_NOTICE => 'Notice',
+                E_USER_WARNING => 'U_Warning',
+                E_USER_NOTICE => 'U_Notice',
+                E_DEPRECATED => 'Deprecated',
+                E_USER_DEPRECATED => 'U_Deprecated',
+            ][$error_number];
+
             if (function_exists('kleeja_log')) {
-                $error_name = [
-                    E_WARNING => 'Warning',
-                    E_NOTICE => 'Notice',
-                    E_USER_WARNING => 'U_Warning',
-                    E_USER_NOTICE => 'U_Notice',
-                    E_DEPRECATED => 'Deprecated',
-                    E_USER_DEPRECATED => 'U_Deprecated',
-                ][$error_number];
                 kleeja_log('[' . $error_name . '] ' . basename($error_file) . ':' . $error_line . ' ' . $error_string);
+            }
+
+            //for the debug panel, a repeated one is counted, so a warning inside a loop can not fill the memory
+            if (defined('DEV_STAGE')) {
+                $warning_key = $error_number . ':' . $error_file . ':' . $error_line;
+
+                $GLOBALS['kleeja_debug_warnings'][$warning_key] ??= [
+                    'type' => $error_name,
+                    'message' => $error_string,
+                    'file' => $error_file,
+                    'line' => $error_line,
+                    //hidden by the @ operator
+                    'suppressed' => !(error_reporting() & $error_number),
+                    'count' => 0,
+                ];
+                $GLOBALS['kleeja_debug_warnings'][$warning_key]['count']++;
             }
 
             break;
@@ -101,6 +118,16 @@ function kleeja_show_error(
 
             $escape = fn(string $value): string => htmlspecialchars($value, ENT_QUOTES, 'UTF-8');
             $error_template = @file_get_contents(__DIR__ . '/error.html');
+
+            //for the history of the debug toolbar, it is saved after the exit
+            if (defined('DEV_STAGE')) {
+                $GLOBALS['kleeja_debug_error'] = [
+                    'type' => $error_name,
+                    'message' => $error_string,
+                    'file' => $error_file,
+                    'line' => $error_line,
+                ];
+            }
 
             if ($error_template === false) {
                 echo '<strong>Kleeja error: [ ' .
@@ -223,6 +250,12 @@ include PATH . 'includes/functions_display.php';
 include PATH . 'includes/plugins.php';
 include PATH . 'includes/FetchFile.php';
 include PATH . 'includes/cookie.php';
+
+//debug panel and the history of requests, only while developing
+if (defined('DEV_STAGE')) {
+    include PATH . 'includes/debug.php';
+    register_shutdown_function('kleeja_debug_save');
+}
 
 if (defined('IN_ADMIN')) {
     include PATH . 'includes/functions_adm.php';

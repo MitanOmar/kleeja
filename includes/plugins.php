@@ -34,6 +34,13 @@ class Plugins
      * Names of the plugins of each hook, in the same order of $all_plugins_hooks, kept only in DEV_STAGE for debugging
      */
     private array $hooks_plugins = [];
+    /**
+     * Kept only in DEV_STAGE for debugging: how many times each hook ran, even without plugins,
+     * [calls, time] of each plugin in each hook, and [start, time, hook, plugin] of each call for the timeline
+     */
+    private array $hooks_runs = [];
+    private array $hooks_time = [];
+    private array $hooks_timeline = [];
     private array $installed_plugins = [];
     private array $installed_plugins_info = [];
 
@@ -197,12 +204,26 @@ class Plugins
     public function run(string $hook_name, array $args = []): array
     {
         $return_value = $to_be_returned = [];
+        $debug = defined('DEV_STAGE');
+
+        if ($debug) {
+            $this->hooks_runs[$hook_name] = ($this->hooks_runs[$hook_name] ?? 0) + 1;
+        }
 
         if (!empty($this->all_plugins_hooks[$hook_name])) {
-            foreach ($this->all_plugins_hooks[$hook_name] as $_ => $functions) {
-                foreach ($functions as $function) {
+            foreach ($this->all_plugins_hooks[$hook_name] as $priority => $functions) {
+                foreach ($functions as $key => $function) {
                     if (is_callable($function)) {
+                        $start = $debug ? get_microtime() : 0.0;
                         $return_value = $function($args);
+
+                        if ($debug) {
+                            $this->debug_callback(
+                                $hook_name,
+                                $this->hooks_plugins[$hook_name][$priority][$key] ?? '',
+                                $start,
+                            );
+                        }
 
                         if (is_array($return_value)) {
                             $args = array_merge($args, $return_value);
@@ -214,6 +235,26 @@ class Plugins
         }
 
         return sizeof($to_be_returned) ? $to_be_returned : [];
+    }
+
+    /**
+     * keep the time of a plugin callback, for the debug panel
+     * @param string $hook_name
+     * @param string $plugin_name
+     * @param float  $start       time of the call start
+     */
+    private function debug_callback(string $hook_name, string $plugin_name, float $start): void
+    {
+        $time = get_microtime() - $start;
+
+        $this->hooks_time[$hook_name][$plugin_name] ??= [0, 0.0];
+        $this->hooks_time[$hook_name][$plugin_name][0]++;
+        $this->hooks_time[$hook_name][$plugin_name][1] += $time;
+
+        //a hook inside a loop can run a lot, the timeline does not need all of them
+        if (count($this->hooks_timeline) < 1000) {
+            $this->hooks_timeline[] = [$start, $time, $hook_name, $plugin_name];
+        }
     }
 
     /**
@@ -243,6 +284,9 @@ class Plugins
         return [
             'all_plugins_hooks' => $this->all_plugins_hooks,
             'hooks_plugins' => $this->hooks_plugins,
+            'hooks_runs' => $this->hooks_runs,
+            'hooks_time' => $this->hooks_time,
+            'hooks_timeline' => $this->hooks_timeline,
             'installed_plugins' => $this->installed_plugins,
         ];
     }

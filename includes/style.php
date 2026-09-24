@@ -19,6 +19,7 @@ class kleeja_style
     protected array $loop = [];
     protected array $reg = ['var' => '/([{]{1,2})+([A-Z0-9_\.]+)[}]{1,2}/i'];
     public bool $caching = true; //save templates as caches to not compiled a lot of times
+    public array $debug_templates = []; //[name, start, time] of the displayed templates, only in DEV_STAGE
 
     /**
      * Function to load a template file.
@@ -357,6 +358,7 @@ class kleeja_style
     {
         global $config;
 
+        $start = defined('DEV_STAGE') ? get_microtime() : 0.0;
         $this->vars = $GLOBALS;
 
         //is there ?
@@ -371,6 +373,15 @@ class kleeja_style
         include PATH . 'cache/tpl_' . $this->re_name_tpl($template_name, $style_path) . '.php';
         $page = ob_get_contents();
         ob_end_clean();
+
+        //for the debug panel
+        if (defined('DEV_STAGE')) {
+            $this->debug_templates[] = [
+                'name' => $template_name,
+                'start' => $start,
+                'time' => get_microtime() - $start,
+            ];
+        }
 
         return $page;
     }

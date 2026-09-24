@@ -423,6 +423,11 @@ if (!ig('_ajax_')) {
 //footer
 if (!ig('_ajax_')) {
     echo $tpl->display('admin_footer');
+
+    //debug toolbar of includes/debug.php, its data are collected only in DEV_STAGE
+    if (defined('DEV_STAGE') && user_can('enter_acp')) {
+        kleeja_debug();
+    }
 }
 //close db
 $SQL->close();
