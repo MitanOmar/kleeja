@@ -33,6 +33,7 @@ $page2_action = basename(ADMIN_PATH) . '?cp=' . basename(__FILE__, '.php') . $ur
 $action = $page_action . $url_pg;
 $is_search = $affected = false;
 $H_FORM_KEYS = kleeja_add_form_key('adm_files');
+$GET_FORM_KEY = kleeja_add_form_key_get('adm_files_get');
 
 //
 // Check form key
@@ -132,6 +133,12 @@ if (ip('submit')) {
     //Delete all user files [only one user]
     //
     if (ig('deletefiles')) {
+        //check _GET Csrf token
+        if (!kleeja_check_form_key_get('adm_files_get')) {
+            http_response_code(401);
+            kleeja_admin_err($lang['INVALID_GET_KEY'], title: $lang['ERROR'], redirect: $action, rs: 1);
+        }
+
         $query = [
             'SELECT' => 'f.id, f.size, f.name, f.folder',
             'FROM' => "{$dbprefix}files f",
@@ -234,7 +241,14 @@ if (ip('submit')) {
     if (ig('search_id')) {
         //get search filter
         $filter = get_filter(g('search_id'), 'file_search', false, 'filter_uid');
-        $deletelink = basename(ADMIN_PATH) . '?cp=' . basename(__FILE__, '.php') . '&deletefiles=' . g('search_id');
+        $deletelink =
+            basename(ADMIN_PATH) .
+            '?cp=' .
+            basename(__FILE__, '.php') .
+            '&amp;deletefiles=' .
+            g('search_id') .
+            '&amp;' .
+            $GET_FORM_KEY;
         $is_search = true;
         [$query['WHERE'], $query['BIND']] = build_search_query(
             unserialize(htmlspecialchars_decode($filter['filter_value']), ['allowed_classes' => false]),

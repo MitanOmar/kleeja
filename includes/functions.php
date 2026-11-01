@@ -1510,9 +1510,11 @@ function kleeja_check_captcha(): bool
 
     if (!empty($_SESSION['klj_sec_code']) && ip('kleeja_code_answer')) {
         if ($_SESSION['klj_sec_code'] === trim(p('kleeja_code_answer'))) {
-            unset($_SESSION['klj_sec_code']);
             $return = true;
         }
+
+        //one answer for each image, so the codes can't be tried one after another
+        unset($_SESSION['klj_sec_code']);
     }
 
     extract(runHook('kleeja_check_captcha_func', get_defined_vars()));

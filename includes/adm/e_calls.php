@@ -25,6 +25,7 @@ $action =
     $current_smt;
 $msg_sent = ig('sent') ? g('sent', 'int') : false;
 $H_FORM_KEYS = kleeja_add_form_key('adm_calls');
+$GET_FORM_KEY = kleeja_add_form_key_get('adm_calls_get');
 $there_queue = preg_match('!:del_[a-z0-9]{0,3}calls:!i', $config['queue']);
 
 //
@@ -38,6 +39,17 @@ if (ip('submit')) {
 
 //add delete process to the queue
 if ($current_smt === 'del_d30' || $current_smt === 'del_all') {
+    //check _GET Csrf token
+    if (!kleeja_check_form_key_get('adm_calls_get')) {
+        http_response_code(401);
+        kleeja_admin_err(
+            $lang['INVALID_GET_KEY'],
+            title: $lang['ERROR'],
+            redirect: basename(ADMIN_PATH) . '?cp=' . basename(__FILE__, '.php'),
+            rs: 1,
+        );
+    }
+
     if (strpos($config['queue'], ':' . $current_smt . 'calls:') !== false) {
         kleeja_admin_err(
             $lang['DELETE_PROCESS_IN_WORK'],
@@ -199,14 +211,14 @@ $go_menu = [
     //CHECK IF IT'S ALREADY DONE ?
     'del_d30' => [
         'name' => $lang['DELETE_EARLIER_30DAYS'],
-        'link' => basename(ADMIN_PATH) . '?cp=e_calls&amp;smt=del_d30',
+        'link' => basename(ADMIN_PATH) . '?cp=e_calls&amp;smt=del_d30&amp;' . $GET_FORM_KEY,
         'goto' => 'del_d30',
         'current' => $current_smt === 'del_d30',
         'confirm' => true,
     ],
     'del_all' => [
         'name' => $lang['DELETE_ALL'],
-        'link' => basename(ADMIN_PATH) . '?cp=e_calls&amp;smt=del_all',
+        'link' => basename(ADMIN_PATH) . '?cp=e_calls&amp;smt=del_all&amp;' . $GET_FORM_KEY,
         'goto' => 'del_all',
         'current' => $current_smt === 'del_all',
         'confirm' => true,

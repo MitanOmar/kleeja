@@ -39,8 +39,8 @@ if (!empty($case) && in_array($case, ['install', 'uninstall', 'enable', 'disable
     }
 }
 
-//check _POST Csrf token
-if (ip('newplugin')) {
+//check _POST Csrf token, the upload form sends newplugin, and ?case=upload without it is checked too
+if (ip('newplugin') || $case === 'upload') {
     if (!kleeja_check_form_key('adm_plugins')) {
         http_response_code(401);
         kleeja_admin_err($lang['INVALID_FORM_KEY'], title: $lang['ERROR'], redirect: $action);

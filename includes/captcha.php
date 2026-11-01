@@ -25,14 +25,13 @@ exit();
 //
 function kleeja_cpatcha_image(): void
 {
-    //Let's generate a totally random string using md5
-    $md5_hash = md5(rand(0, 999));
+    //4 random characters, without the ones that look alike (0 and o, 1 and l and i, 9 and g and q)
+    $chars = '23456789abcdefhjkmnprstuvwxyz';
+    $security_code = '';
 
-    //I think the bad things in captcha is two things, O and 0 , so let's remove zero.
-    $security_code = str_replace('0', '', $md5_hash);
-
-    //We don't need a 32 character long string so we trim it down to 4
-    $security_code = substr($security_code, 15, 4);
+    for ($i = 0; $i < 4; ++$i) {
+        $security_code .= $chars[random_int(0, strlen($chars) - 1)];
+    }
 
     //Set the session to store the security code
     $_SESSION['klj_sec_code'] = $security_code;
